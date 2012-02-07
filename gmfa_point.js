@@ -59,7 +59,7 @@
                     if (status == google.maps.GeocoderStatus.OK) {
                         map.setCenter(results[0].geometry.location);
                         map.setZoom(17);
-                    else if (status == google.maps.GeocoderStatus.ZERO_RESULTS) {
+                    } else if (status == google.maps.GeocoderStatus.ZERO_RESULTS) {
                         alert("No results");
                     } else {
                         alert("Geocode was not successful for the following reason: " + status);
