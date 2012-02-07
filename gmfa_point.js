@@ -30,6 +30,8 @@
             return img;
         })();
 
+        var geocoder = new google.maps.Geocoder();
+
         var map = new google.maps.Map(this.get(0), mapOp);
         var overlay = new google.maps.OverlayView();
         overlay.draw = function () {};
@@ -48,12 +50,44 @@
         })();
 
         var placeMarker = function (location) {
-            currentMarker.update(new google.maps.Marker($.extend({}, markerOp, {
+            var marker = new google.maps.Marker($.extend({}, markerOp, {
                 position: location,
                 map: map,
-            })));
+            }));
             latInput.attr("value", location.lat());
             lngInput.attr("value", location.lng());
+            currentMarker.update(marker);
+            
+            if (op.addressInput !== null) {
+                geocoder.geocode({ 'latLng': location }, function (results, status) {
+                    var createInfo = function (address) {
+                        var a = $(document.createElement("a")).attr("href", "#").click(function (e) {
+                            e.preventDefault();
+                            op.addressInput.attr("value", address);
+                        }).append(document.createTextNode("Use this address"));
+
+                        return $(document.createElement("div")).append(
+                            document.createTextNode(address),
+                            document.createElement("br"),
+                            a).get(0);
+                    };
+                    
+                    var msg = (function () {
+                        if (status == google.maps.GeocoderStatus.OK) {
+                            if (results[1]) {
+                                return createInfo(results[1].formatted_address);
+                            }
+                            return "No address here";
+                        } else {
+                            return "Geocoder failed due to: " + status;
+                        }
+                    })();
+                    var info = new google.maps.InfoWindow({
+                        content: msg,
+                    });
+                    info.open(map, marker);
+                });
+            }
         };
 
         var _this = this;

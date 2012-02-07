@@ -4,8 +4,8 @@
     <title></title>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
     <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css"/>
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js"></script>
-    <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.js"></script>
     <style type="text/css">
         #mapContainer {
             height: 300px;
@@ -34,16 +34,19 @@
     <script type="text/javascript" src="gmfa_point.js"></script>
     <script type="text/javascript">
         $(document).ready(function() {
-            $("#mapContainer").insertGMFAPoint($("#lat"), $("#lng"), $("#markerContainer"));
+            $("#mapContainer").insertGMFAPoint($("#lat"), $("#lng"), $("#markerContainer"), {
+                addressInput: $("#address"),
+            });
         });
     </script>
 </head>
 <body>
-    <div id="form"><label for="lat">Latitude:</label> <input type="text" id="lat" /><label for="lng">Longitude:</label> <input type="text" id="lng" /></div>
+    <div><label for="lat">Latitude:</label> <input type="text" id="lat" /><label for="lng">Longitude:</label> <input type="text" id="lng" /></div>
     <div id="mapContainer"></div>
     <div id='markerContainer'>
         Drop at the location
         <br/>
     </div>
+    <div><label for="address">Address:</label> <input type="text" id="address" /></div>
 </body>
 </html>
