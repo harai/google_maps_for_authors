@@ -2,6 +2,7 @@
     $.fn.insertGMFAPoint = function (latInput, lngInput, markerContainer, options) {
         var op = $.extend({
             addressInput: null,
+            showButton: null,
             icon: "http://maps.google.co.jp/mapfiles/ms/icons/blue-dot.png",
             iconSize: {
                 width: 32,
@@ -49,6 +50,24 @@
             };
         })();
 
+        if (op.addressInput !== null && op.showButton !== null) {
+            op.showButton.click(function (e) {
+                e.preventDefault();
+                var ad = op.addressInput.attr("value");
+
+                geocoder.geocode({ 'address': ad }, function (results, status) {
+                    if (status == google.maps.GeocoderStatus.OK) {
+                        map.setCenter(results[0].geometry.location);
+                        map.setZoom(17);
+                    else if (status == google.maps.GeocoderStatus.ZERO_RESULTS) {
+                        alert("No results");
+                    } else {
+                        alert("Geocode was not successful for the following reason: " + status);
+                    }
+                });
+            })
+        }
+
         var placeMarker = function (location) {
             var marker = new google.maps.Marker($.extend({}, markerOp, {
                 position: location,
@@ -56,6 +75,7 @@
             }));
             latInput.attr("value", location.lat());
             lngInput.attr("value", location.lng());
+            
             currentMarker.update(marker);
             
             if (op.addressInput !== null) {

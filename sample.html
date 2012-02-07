@@ -36,17 +36,21 @@
         $(document).ready(function() {
             $("#mapContainer").insertGMFAPoint($("#lat"), $("#lng"), $("#markerContainer"), {
                 addressInput: $("#address"),
+                showButton: $("#show"),
             });
         });
     </script>
 </head>
 <body>
-    <div><label for="lat">Latitude:</label> <input type="text" id="lat" /><label for="lng">Longitude:</label> <input type="text" id="lng" /></div>
+    <div>
+        <label for="lat">Latitude:</label> <input type="text" id="lat" />
+        <label for="lng">Longitude:</label> <input type="text" id="lng" />
+    </div>
     <div id="mapContainer"></div>
     <div id='markerContainer'>
         Drop at the location
         <br/>
     </div>
-    <div><label for="address">Address:</label> <input type="text" id="address" /></div>
+    <div><label for="address">Address:</label> <input type="text" id="address" /> <a href="#" id="show">Show this address</a></div>
 </body>
 </html>
