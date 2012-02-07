@@ -68,13 +68,16 @@
             })
         }
 
+        var updateFields = function (location) {
+            latInput.attr("value", location.lat());
+            lngInput.attr("value", location.lng());
+        };
+
         var placeMarker = function (location) {
             var marker = new google.maps.Marker($.extend({}, markerOp, {
                 position: location,
                 map: map,
             }));
-            latInput.attr("value", location.lat());
-            lngInput.attr("value", location.lng());
             
             currentMarker.update(marker);
             
@@ -110,6 +113,14 @@
             }
         };
 
+        (function () {
+            var lat = latInput.attr("value");
+            var lng = lngInput.attr("value");
+            if (lat !== null && lng !== null && lat !== "" && lng !== "") {
+                placeMarker(new google.maps.LatLng(parseFloat(lat), parseFloat(lng)));
+            }
+        })();
+
         var _this = this;
         iconImg.draggable({
             helper: 'clone',
@@ -126,7 +137,9 @@
                 var p = new google.maps.Point(ev.pageX - o.left - bl, ev.pageY - o.top - bt);
                 // nothing should happen if dropped outside the map
                 if (0 <= p.x && 0 <= p.y && p.x < _this.innerWidth() && p.y < _this.innerHeight()) {
-                    placeMarker(overlay.getProjection().fromContainerPixelToLatLng(p));
+                    var loc = overlay.getProjection().fromContainerPixelToLatLng(p);
+                    updateFields(loc)
+                    placeMarker(loc);
                 }
             }
         });
