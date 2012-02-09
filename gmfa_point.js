@@ -100,7 +100,8 @@
             var a = mkEl("a").attr({
                 href: "#",
                 style: "text-decoration: none",
-            }).click(function () {
+            }).click(function (e) {
+                e.preventDefault();
                 map.panTo(currentMarker.get().getPosition());
                 // google.maps.event.trigger(currentMarker.get(), "click");
             }).append(mkText("Focus on the marker"));
