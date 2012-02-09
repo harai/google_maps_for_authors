@@ -56,6 +56,10 @@
         // map.getBounds().contains(location)
         // does not work well when the container has border.
         var isLocationShown = function (location, container) {
+            if (overlay.getProjection() === undefined) {
+                return null;
+            }
+            
             var p = overlay.getProjection().fromLatLngToContainerPixel(location);
             return isPointOnMap(p, container);
         };
@@ -63,7 +67,10 @@
         var updateFocusLink = function (marker) {
             if (marker !== null) {
                 var loc = marker.getPosition();
-                if (isLocationShown(loc, _this)) {
+                var c = isLocationShown(loc, _this);
+                if (c === null) { // when overlay has not been initialized
+                    return ;
+                } else if (c) {
                     focusOnMarkerLink.hide();
                 } else {
                     focusOnMarkerLink.show();
@@ -85,6 +92,30 @@
                 },
                 get: function () {
                     return marker;
+                },
+            };
+        })();
+
+        var focusOnMarkerLink = (function () {
+            var a = mkEl("a").attr({
+                href: "#",
+                style: "text-decoration: none",
+            }).click(function () {
+                map.panTo(currentMarker.get().getPosition());
+                // google.maps.event.trigger(currentMarker.get(), "click");
+            }).append(mkText("Focus on the marker"));
+            var div = mkEl("div").attr({
+                style: "position: absolute; top: 5px; left: 40px; z-index: 10; font-weight: bold; background: snow",
+            }).addClass("showmarker").append(a);
+
+            _this.append(div);
+
+            return {
+                show: function () {
+                    div.show();
+                },
+                hide: function () {
+                    div.hide();
                 },
             };
         })();
@@ -226,30 +257,6 @@
             if (lat !== null && lng !== null && lat !== "" && lng !== "") {
                 placeMarker(new google.maps.LatLng(parseFloat(lat), parseFloat(lng)));
             }
-        })();
-
-        var focusOnMarkerLink = (function () {
-            var a = mkEl("a").attr({
-                href: "#",
-                style: "text-decoration: none",
-            }).click(function () {
-                map.setCenter(currentMarker.get().getPosition());
-                // google.maps.event.trigger(currentMarker.get(), "click");
-            }).append(mkText("Focus on the marker"));
-            var div = mkEl("div").attr({
-                style: "position: absolute; top: 5px; left: 40px; z-index: 10; font-weight: bold; background: snow",
-            }).addClass("showmarker").append(a);
-
-            _this.append(div);
-
-            return {
-                show: function () {
-                    div.show();
-                },
-                hide: function () {
-                    div.hide();
-                },
-            };
         })();
 
         google.maps.event.addListener(map, 'bounds_changed', function () {
