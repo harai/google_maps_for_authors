@@ -60,6 +60,19 @@
             return isPointOnMap(p, container);
         };
 
+        var updateFocusLink = function (marker) {
+            if (marker !== null) {
+                var loc = marker.getPosition();
+                if (isLocationShown(loc, _this)) {
+                    focusOnMarkerLink.hide();
+                } else {
+                    focusOnMarkerLink.show();
+                }
+            } else {
+                focusOnMarkerLink.hide();
+            }
+        };
+
         var currentMarker = (function () {
             var marker = null;
             return {
@@ -68,6 +81,7 @@
                         marker.setMap(null);
                     }
                     marker = newMarker;
+                    updateFocusLink(marker);
                 },
                 get: function () {
                     return marker;
@@ -134,6 +148,11 @@
         };
 
         var placeMarker = function (location) {
+            if (location === null) {
+                currentMarker.update(null);
+                return ;
+            }
+
             var marker = new google.maps.Marker($.extend({}, markerOp, {
                 position: location,
                 map: map,
@@ -141,7 +160,8 @@
 
             currentMarker.update(marker);
 
-            
+            var info = null; // assigned asynchronously
+
             var df = doAsync(function () {});
             if (op.addressInput !== null) {
                 df = geocodeAddressLookup(location).next(function (results, status) {
@@ -162,28 +182,42 @@
                     return mkText("Geocoder failed due to: " + status);
                 });
             }
-
             df.next(function (option) {
                 var createInfo = function () {
                     var loc = mkEl("div").addClass("location").append(
                         mkText("Latitude: " + location.lat().toFixed(5) + "..."),
                         mkEl("br"),
                         mkText("Longitude: " + location.lng().toFixed(5) + "..."));
-    
-    
+
                     var c = mkEl("div").addClass("infowindow").append(loc);
                     if (option) {
                         c.append(option);
                     }
+                    
+                    var a = mkEl("a").attr("href", "#").click(function (e) {
+                        e.preventDefault();
+                        updateFields(null)
+                        placeMarker(null);
+                    }).append(mkText("[Remove]"));
+                    var del = mkEl("div").addClass("removebutton").attr({
+                        style: "text-align: right",
+                    }).append(a);
+                    c.append(del);
+
                     return c.get(0);
                 };
 
-                var info = new google.maps.InfoWindow({
+                info = new google.maps.InfoWindow({
                     content: createInfo(),
                 });
                 info.open(map, marker);
             });
 
+            google.maps.event.addListener(marker, 'click', function () {
+                if (info !== null) {
+                    info.open(map, marker);
+                }
+            });
         };
 
         (function () {
@@ -200,6 +234,7 @@
                 style: "text-decoration: none",
             }).click(function () {
                 map.setCenter(currentMarker.get().getPosition());
+                // google.maps.event.trigger(currentMarker.get(), "click");
             }).append(mkText("Focus on the marker"));
             var div = mkEl("div").attr({
                 style: "position: absolute; top: 5px; left: 40px; z-index: 10; font-weight: bold; background: snow",
@@ -218,15 +253,7 @@
         })();
 
         google.maps.event.addListener(map, 'bounds_changed', function () {
-            var m = currentMarker.get();
-            if (m !== null) {
-                var loc = m.getPosition();
-                if (isLocationShown(loc, _this)) {
-                    focusOnMarkerLink.hide();
-                } else {
-                    focusOnMarkerLink.show();
-                }
-            }
+            updateFocusLink(currentMarker.get());
         });
 
         iconImg.draggable({
