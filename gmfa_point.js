@@ -14,6 +14,16 @@
             },
         }, options);
 
+        var _this = this;
+
+        var mkEl = function (e) {
+            return $(document.createElement(e));
+        };
+
+        var mkText = function (e) {
+            return document.createTextNode(e);
+        };
+
         // null/undefined is legal
         var mapOp = $.extend({}, $.fn.insertGMFAPoint.mapOptions, op.map);
         var markerOp = $.extend({
@@ -38,6 +48,18 @@
         overlay.draw = function () {};
         overlay.setMap(map);
 
+        var isPointOnMap = function (point, container) {
+            return 0 <= point.x && 0 <= point.y &&
+                point.x < container.innerWidth() && point.y < container.innerHeight();
+        };
+
+        // map.getBounds().contains(location)
+        // does not work well when the container has border.
+        var isLocationShown = function (location, container) {
+            var p = overlay.getProjection().fromLatLngToContainerPixel(location);
+            return isPointOnMap(p, container);
+        };
+
         var currentMarker = (function () {
             var marker = null;
             return {
@@ -46,6 +68,9 @@
                         marker.setMap(null);
                     }
                     marker = newMarker;
+                },
+                get: function () {
+                    return marker;
                 },
             };
         })();
@@ -69,8 +94,43 @@
         }
 
         var updateFields = function (location) {
-            latInput.attr("value", location.lat());
-            lngInput.attr("value", location.lng());
+            latInput.attr("value", location === null ? "" : location.lat());
+            lngInput.attr("value", location === null ? "" : location.lng());
+        };
+
+        var deferred = function () {
+            var nextFn = null;
+            var nextDf = null;
+
+            return {
+                fire: function () {
+                    if (nextFn !== null) {
+                        var res = nextFn.apply(this, arguments);
+                        nextDf.fire(res);
+                    }
+                },
+                next: function (fn) {
+                    nextFn = fn;
+                    nextDf = deferred();
+                    return nextDf;
+                },
+            };
+        };
+
+        var geocodeAddressLookup = function (location) {
+            var df = deferred();
+            geocoder.geocode({ 'latLng': location }, function (results, status) {
+                df.fire(results, status);
+            });
+            return df;
+        };
+
+        var doAsync = function (fn) {
+            var df = deferred();
+            setTimeout(function () {
+                df.fire(fn());
+            }, 0);
+            return df;
         };
 
         var placeMarker = function (location) {
@@ -78,39 +138,52 @@
                 position: location,
                 map: map,
             }));
-            
+
             currentMarker.update(marker);
+
             
+            var df = doAsync(function () {});
             if (op.addressInput !== null) {
-                geocoder.geocode({ 'latLng': location }, function (results, status) {
-                    var createInfo = function (address) {
-                        var a = $(document.createElement("a")).attr("href", "#").click(function (e) {
+                df = geocodeAddressLookup(location).next(function (results, status) {
+                    var createNode = function (address) {
+                        var a = mkEl("a").attr("href", "#").click(function (e) {
                             e.preventDefault();
                             op.addressInput.attr("value", address);
-                        }).append(document.createTextNode("Use this address"));
-
-                        return $(document.createElement("div")).append(
-                            document.createTextNode(address),
-                            document.createElement("br"),
-                            a).get(0);
+                        }).append(mkText("Also copy this address"));
+                        return mkEl("div").addClass("address").append(mkText(address), mkEl("br"), a).get(0);
                     };
                     
-                    var msg = (function () {
-                        if (status == google.maps.GeocoderStatus.OK) {
-                            if (results[1]) {
-                                return createInfo(results[1].formatted_address);
-                            }
-                            return "No address here";
-                        } else {
-                            return "Geocoder failed due to: " + status;
+                    if (status == google.maps.GeocoderStatus.OK) {
+                        if (results[1]) {
+                            return createNode(results[1].formatted_address);
                         }
-                    })();
-                    var info = new google.maps.InfoWindow({
-                        content: msg,
-                    });
-                    info.open(map, marker);
+                        return mkText("No address here");
+                    }
+                    return mkText("Geocoder failed due to: " + status);
                 });
             }
+
+            df.next(function (option) {
+                var createInfo = function () {
+                    var loc = mkEl("div").addClass("location").append(
+                        mkText("Latitude: " + location.lat().toFixed(5) + "..."),
+                        mkEl("br"),
+                        mkText("Longitude: " + location.lng().toFixed(5) + "..."));
+    
+    
+                    var c = mkEl("div").addClass("infowindow").append(loc);
+                    if (option) {
+                        c.append(option);
+                    }
+                    return c.get(0);
+                };
+
+                var info = new google.maps.InfoWindow({
+                    content: createInfo(),
+                });
+                info.open(map, marker);
+            });
+
         };
 
         (function () {
@@ -121,7 +194,41 @@
             }
         })();
 
-        var _this = this;
+        var focusOnMarkerLink = (function () {
+            var a = mkEl("a").attr({
+                href: "#",
+                style: "text-decoration: none",
+            }).click(function () {
+                map.setCenter(currentMarker.get().getPosition());
+            }).append(mkText("Focus on the marker"));
+            var div = mkEl("div").attr({
+                style: "position: absolute; top: 5px; left: 40px; z-index: 10; font-weight: bold; background: snow",
+            }).addClass("showmarker").append(a);
+
+            _this.append(div);
+
+            return {
+                show: function () {
+                    div.show();
+                },
+                hide: function () {
+                    div.hide();
+                },
+            };
+        })();
+
+        google.maps.event.addListener(map, 'bounds_changed', function () {
+            var m = currentMarker.get();
+            if (m !== null) {
+                var loc = m.getPosition();
+                if (isLocationShown(loc, _this)) {
+                    focusOnMarkerLink.hide();
+                } else {
+                    focusOnMarkerLink.show();
+                }
+            }
+        });
+
         iconImg.draggable({
             helper: 'clone',
             cursorAt: op.iconPoint,
@@ -136,7 +243,7 @@
                 var bt = parseInt(_this.css("border-top-width"), 10);
                 var p = new google.maps.Point(ev.pageX - o.left - bl, ev.pageY - o.top - bt);
                 // nothing should happen if dropped outside the map
-                if (0 <= p.x && 0 <= p.y && p.x < _this.innerWidth() && p.y < _this.innerHeight()) {
+                if (isPointOnMap(p, _this)) {
                     var loc = overlay.getProjection().fromContainerPixelToLatLng(p);
                     updateFields(loc)
                     placeMarker(loc);
